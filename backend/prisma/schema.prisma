@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Change to match your database provider (e.g., MySQL, SQLite, etc.)
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int      @id @default(autoincrement())
+  username        String   @unique
+  email           String   @unique
+  hashedPassword  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  posts           Post[]
+  comments        Comment[]
+  votes           Vote[]
+  notifications   Notification[]
+}
+
+model Post {
+  id              Int        @id @default(autoincrement())
+  authorId        Int
+  author          User       @relation(fields: [authorId], references: [id])
+  title           String
+  content         String
+  replyId         Int?       // Nullable, no need for @default(null)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  votingScore     Int        @default(0)
+  comments        Comment[]
+  votes           Vote[]
+  notifications   Notification[]
+
+  @@index([authorId])
+}
+
+model Comment {
+  id              Int        @id @default(autoincrement())
+  postId          Int
+  post            Post       @relation(fields: [postId], references: [id])
+  userId          Int
+  user            User       @relation(fields: [userId], references: [id])
+  parentCommentId Int?       // Nullable, no need for @default(null)
+  content         String
+  votingScore     Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  aiGenerated     Boolean    @default(false)
+  votes           Vote[]
+  notifications   Notification[]
+
+  @@index([postId, userId])
+}
+
+model Vote {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  postId    Int?    // Nullable, no need for @default(null)
+  post      Post?   @relation(fields: [postId], references: [id])
+  commentId Int?    // Nullable, no need for @default(null)
+  comment   Comment? @relation(fields: [commentId], references: [id])
+  voteType  String  // Use 'upvote' or 'downvote'
+  
+  @@unique([userId, postId, commentId]) // Composite unique constraint
+}
+
+
+model Notification {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
+  type          String   // 'comment', 'upvote', 'downvote', etc.
+  postId        Int?     // Nullable, no need for @default(null)
+  post          Post?    @relation(fields: [postId], references: [id])
+  commentId     Int?     // Nullable, no need for @default(null)
+  comment       Comment? @relation(fields: [commentId], references: [id])
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  
+  @@index([userId, isRead])
+}
